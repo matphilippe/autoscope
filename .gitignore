@@ -1,0 +1,4 @@
+svscope
+*.exe
+*.test
+coverage.out
