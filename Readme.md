@@ -7,8 +7,10 @@
 
 ## But Why ?
 
-Conventional commits are awesome: it enables and support development workflows using one's git log as a cornerstone.
-However, they have drawbacks. In particular, `autoscope` helps with typos and omissions around the commit message's scope.
+Conventional commits are awesome: they allow you to leverage your git logs to support your workflow
+However, they have drawbacks: a typo could lead to very different interpretation of a commit's message.
+
+`autoscope` helps with typos and omissions around the commit message's scope.
 
 Some teams/users may not even care about scopes, but in the context of `monorepos`, they can play a pivotal role.
 
@@ -29,18 +31,18 @@ In a PR, you make a `fix` to `A`, and a `feat!` to be, expecting a patch bump an
 - If you merge the PR by rebasing, your log will show the `fix` commit on `A`, and the `feat!` on `B`. Come back tomorrow, you'll still understand what happened there.
 - If you merge the PR with a squash then rebase, you will lose information: a commit now indicates both a `fix` and a `feat!` and touches `A` and `B`. What do you bump ?
 
-Scopes are useful, but it puts work and focus on the dev, this tool hopes to lift the work.
+Scopes are useful, but it puts work and focus on the dev, this tool lifts some of the work.
 
 ## Installation
 
 ```bash
-go install github.com/mphilippe/autoscope@latest
+go install github.com/matphilippe/autoscope@latest
 ```
 
 Or build from source:
 
 ```bash
-git clone https://github.com/mphilippe/autoscope
+git clone https://github.com/matphilippe/autoscope
 cd svscope
 go build
 ```

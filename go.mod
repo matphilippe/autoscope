@@ -1,4 +1,4 @@
-module github.com/mphilippe/autoscope
+module github.com/matphilippe/autoscope
 
 go 1.24.4
 
