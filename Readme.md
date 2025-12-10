@@ -52,29 +52,29 @@ You can use the environment variable `AUTOSCOPE_CONFIG_FILE` to overwrite the lo
 
 The file declares a list of `modules` for instance:
 
-```
+```yaml
 modules:
-  - name: api
-    files: src/api/**/*
-  - name: db
-    files: src/db/**/*
-  - filesRe: modules/(?P<scope>\w+)/.*
+    - name: api
+      files: src/api/**/*
+    - name: db
+      files: src/db/**/*
+    - filesRe: modules/(?P<scope>\w+)/.*
 ```
 
 We support two kinds:
 
 1. Named Glob: all files matching a glob belong to the module:
 
-```
-- name: docs
-  files: docs/**/*
-```
+    ```yaml
+    - name: docs
+      files: docs/**/*
+    ```
 
 2. Captured with a Regexp: a regexp with a named capture group named `scope` is matched against file paths. The scope is extracted.
 
-```
-  - filesRe: modules/(?P<scope>\w+)/.*
-```
+    ```yaml
+    - filesRe: modules/(?P<scope>\w+)/.* # You can only do one match here
+    ```
 
 ## Usage as Git Hook
 

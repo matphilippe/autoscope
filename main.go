@@ -25,17 +25,25 @@ func main() {
 	config, err := loadConfig()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error loading config: %v, exiting\n", err)
-		os.Exit(0)
+		os.Exit(1)
 	}
-	fmt.Printf("%s", doTheThing(*config, msg, files))
+	out, err := doTheThing(*config, msg, files)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error matching modules: %v", err)
+		os.Exit(1)
+	}
+	fmt.Printf("%s", out)
 }
 
-func doTheThing(config Config, msg string, files []string) string {
-	scopes := config.getScopesForFiles(files)
-	if len(scopes) == 0 {
-		return ""
+func doTheThing(config Config, msg string, files []string) (string, error) {
+	scopes, err := config.getScopesForFiles(files)
+	if err != nil {
+		return "", err
 	}
-	return addScopesToCommit(msg, scopes)
+	if len(scopes) == 0 {
+		return msg, nil
+	}
+	return addScopesToCommit(msg, scopes), nil
 }
 
 func loadConfig() (*Config, error) {
@@ -50,6 +58,10 @@ func loadConfig() (*Config, error) {
 		}
 	}
 	err = yaml.Unmarshal(data, &config)
+	if err != nil {
+		return nil, err
+	}
+	err = config.IsValid()
 	if err != nil {
 		return nil, err
 	}
