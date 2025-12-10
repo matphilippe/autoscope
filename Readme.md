@@ -43,7 +43,7 @@ Or build from source:
 
 ```bash
 git clone https://github.com/matphilippe/autoscope
-cd svscope
+cd autoscope
 go build
 ```
 
@@ -82,16 +82,7 @@ We support two kinds:
 
 The indented usage is as a git `commit-msg` hook.
 
-Create `.git/hooks/commit-msg`:
-
-```bash
-
-#!/bin/sh
-files=$(git diff --cached --name-only)
-msg=$(cat $1)
-autoscope "${msg}" $files
-```
-
+Copy the script at [hooks/commit-msg](./hooks/commit-msg) to `.git/hooks/commit-msg`.
 Make it executable:
 
 ```bash
