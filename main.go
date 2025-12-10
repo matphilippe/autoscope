@@ -3,89 +3,55 @@ package main
 import (
 	"fmt"
 	"os"
-	"os/exec"
-	"strings"
 
 	"gopkg.in/yaml.v3"
 )
 
+func getConfigFile() string {
+	path := os.Getenv("AUTOSCOPE_CONFIG")
+	if path == "" {
+		path = ".autoscope.yaml"
+	}
+	return path
+}
+
 func main() {
-	if len(os.Args) < 2 {
-		fmt.Fprintf(os.Stderr, "Usage: %s <commit-msg-file>\n", os.Args[0])
+	if len(os.Args) < 3 {
+		fmt.Fprintf(os.Stderr, "Usage: %s <commit-msg> file1 file2 file3 ...\n", os.Args[0])
 		os.Exit(1)
 	}
-
-	commitMsgFile := os.Args[1]
-
+	msg := os.Args[1]
+	files := os.Args[2:]
 	config, err := loadConfig()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error loading config: %v\n", err)
-		os.Exit(1)
-	}
-
-	changedFiles, err := getChangedFiles()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error getting changed files: %v\n", err)
-		os.Exit(1)
-	}
-
-	scopes := config.getScopesForFiles(changedFiles)
-
-	if len(scopes) == 0 {
+		fmt.Fprintf(os.Stderr, "Error loading config: %v, exiting\n", err)
 		os.Exit(0)
 	}
+	fmt.Printf("%s", doTheThing(*config, msg, files))
+}
 
-	commitMsg, err := os.ReadFile(commitMsgFile)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error reading commit message: %v\n", err)
-		os.Exit(1)
+func doTheThing(config Config, msg string, files []string) string {
+	scopes := config.getScopesForFiles(files)
+	if len(scopes) == 0 {
+		return ""
 	}
-
-	newCommitMsg := addScopesToCommit(string(commitMsg), scopes)
-
-	err = os.WriteFile(commitMsgFile, []byte(newCommitMsg), 0644)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error writing commit message: %v\n", err)
-		os.Exit(1)
-	}
+	return addScopesToCommit(msg, scopes)
 }
 
 func loadConfig() (*Config, error) {
-	data, err := os.ReadFile(".svscope.yaml")
+	var config Config
+	file := getConfigFile()
+	data, err := os.ReadFile(file)
 	if err != nil {
 		if os.IsNotExist(err) {
-			data, err = os.ReadFile(".svscope.yml")
-			if err != nil {
-				return nil, fmt.Errorf("config file not found (.svscope.yaml or .svscope.yml)")
-			}
+			return nil, fmt.Errorf("config file `%s` not found", file)
 		} else {
 			return nil, err
 		}
 	}
-
-	var config Config
 	err = yaml.Unmarshal(data, &config)
 	if err != nil {
 		return nil, err
 	}
-
 	return &config, nil
-}
-
-func getChangedFiles() ([]string, error) {
-	cmd := exec.Command("git", "diff", "--cached", "--name-only")
-	output, err := cmd.Output()
-	if err != nil {
-		return nil, err
-	}
-
-	lines := strings.Split(strings.TrimSpace(string(output)), "\n")
-	var files []string
-	for _, line := range lines {
-		if line != "" {
-			files = append(files, line)
-		}
-	}
-
-	return files, nil
 }

@@ -1,41 +1,93 @@
-# SVScope
+# autoscope
 
-SVScope is a QOL tool aimed at facilitating the use of conventional commits and tooling around the practice.
+`autoscope` automates the inclusion of **scopes** in your [conventional commits](https://www.conventionalcommits.org/en/v1.0.0/).
 
-The TL;DR:
+1. You define rules such that "all files under directory `my-dir/` are in the module `myModule`".
+2. If a commit changes a file within `myModule`, then the scope `myModule` will be appended to your commit scope.
 
-1. You get to define a tree/forest of modules in your repo: All files under directory `X/` are in module `my-module`.
-2. If a commit touches a file in `X`, then the scope `my-module` will be appended to your commit scope, if it's not there already.
+## But Why ?
 
-Why this matters?
+Conventional commits are awesome: it enables and support development workflows using one's git log as a cornerstone.
+However, they have drawbacks. In particular, `autoscope` helps with typos and omissions around the commit message's scope.
 
-1. Someone decided your module should be named: `terraform-provider-jebediah-db`, turning `fix: fixed the bug` into `fix(terraform-provider-jebediah-db): fixed the bug`. You are going to make a typo there occasionally.
-2. Scope correctness actually matters if you would like to understand version bumps after merges. In practice, people are using PRs with some merge strategy relevant to their usecases.
-   Squash commits are popular, with a commit message listing the previous commits, but you will not know which individual commits changed which files. Scopes are there for you, by putting the relevant info in the header.
+Some teams/users may not even care about scopes, but in the context of `monorepos`, they can play a pivotal role.
 
-We recommend using this as a `commit-msg` git hook :)
+Consider a repo structured as follows:
+
+```text
+README.md
+docs/
+modules/
+  A/
+  B/
+```
+
+where `A`, and `B` are subprojects you'd like to release and version independently.
+
+In a PR, you make a `fix` to `A`, and a `feat!` to be, expecting a patch bump and major bump to `A` and `B` respectively.
+
+- If you merge the PR by rebasing, your log will show the `fix` commit on `A`, and the `feat!` on `B`. Come back tomorrow, you'll still understand what happened there.
+- If you merge the PR with a squash then rebase, you will lose information: a commit now indicates both a `fix` and a `feat!` and touches `A` and `B`. What do you bump ?
+
+Scopes are useful, but it puts work and focus on the dev, this tool hopes to lift the work.
 
 ## Installation
 
 ```bash
-go install github.com/mphilippe/svscope@latest
+go install github.com/mphilippe/autoscope@latest
 ```
 
 Or build from source:
 
 ```bash
-git clone https://github.com/mphilippe/svscope
+git clone https://github.com/mphilippe/autoscope
 cd svscope
 go build
 ```
 
+## Configuration
+
+Drop a yaml file named `.autoscope.yaml` at the root of your git repository.
+You can use the environment variable `AUTOSCOPE_CONFIG_FILE` to overwrite the location.
+
+The file declares a list of `modules` for instance:
+
+```
+modules:
+  - name: api
+    files: src/api/**/*
+  - name: db
+    files: src/db/**/*
+  - filesRe: modules/(?P<scope>\w+)/.*
+```
+
+We support two kinds:
+
+1. Named Glob: all files matching a glob belong to the module:
+
+```
+- name: docs
+  files: docs/**/*
+```
+
+2. Captured with a Regexp: a regexp with a named capture group named `scope` is matched against file paths. The scope is extracted.
+
+```
+  - filesRe: modules/(?P<scope>\w+)/.*
+```
+
 ## Usage as Git Hook
+
+The indented usage is as a git `commit-msg` hook.
 
 Create `.git/hooks/commit-msg`:
 
 ```bash
+
 #!/bin/sh
-svscope "$1"
+files=$(git diff --cached --name-only)
+msg=$(cat $1)
+autoscope "${msg}" $files
 ```
 
 Make it executable:
@@ -44,45 +96,4 @@ Make it executable:
 chmod +x .git/hooks/commit-msg
 ```
 
-Now when you commit, scopes will be automatically added based on the files you changed!
-
-## How It Works
-
-The tool has minimal git interaction - it only runs `git diff --cached --name-only` to get the list of staged files.
-
-The real work happens in:
-1. **String transformation**: Parsing and reconstructing conventional commit messages with regex
-2. **Pattern matching**: Using glob patterns (via doublestar) and regex to match files to scopes
-3. **Scope assignment**: Deduplicating and appending scopes to the commit message
-
-## Configuration
-
-Obviously a yaml file: `.svscope.yaml` or `.svscope.yml`
-
-```yaml
-modules:
-  - <Module | RegexpModule > # Either regexps with a capture group, or a module def.
-```
-
-A module def is simply:
-
-```
-name: my-scope
-files: modules/my-scope/**/*
-```
-
-This will match a change to `modules/my-scope/folder/file.md` to the scope `my-scope`.
-
-A RegexpModule is slightly more clever:
-
-```
-filesRe: modules/(?<scope>\w+)/.*
-```
-
-This will match a change to e.g. `modules/heey/main.tf` to the scope `heey`
-
-## Limitations
-
-You are in charge of a sensible structure for the module. The tool will apply all scopes it sees.
-
-If two modules have a non-empty intersection, one should be including the entirety of the other.
+Enjoy!
